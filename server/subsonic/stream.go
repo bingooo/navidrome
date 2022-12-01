@@ -44,7 +44,6 @@ func (api *Router) Stream(w http.ResponseWriter, r *http.Request) (*responses.Su
 	if stream.Seekable() {
 		http.ServeContent(w, r, stream.Name(), stream.ModTime(), stream)
 	} else {
-
 		var reqRange = r.Header.Get("Range")
 		// "safari or ios range 0-1 informal support, just wait transcode complete and return content length.
 		// In next request use seekable data. need enable TranscodingCacheSize."
@@ -69,7 +68,14 @@ func (api *Router) Stream(w http.ResponseWriter, r *http.Request) (*responses.Su
 				one := make([]byte, 2)
 				// time.Sleep(10 * time.Second)
 				// io.ReadFull(stream, one)
-				w.Write(one)
+				c, err := w.Write(one)
+				if log.CurrentLevel() >= log.LevelDebug {
+					if err != nil {
+						log.Error(ctx, "Error sending range 0-1", "id", id, err)
+					} else {
+						log.Trace(ctx, "Success sending range 0-1", "id", id, "size", c)
+					}
+				}
 				return nil, nil
 			}
 		}
