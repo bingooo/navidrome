@@ -44,6 +44,36 @@ func (api *Router) Stream(w http.ResponseWriter, r *http.Request) (*responses.Su
 	if stream.Seekable() {
 		http.ServeContent(w, r, stream.Name(), stream.ModTime(), stream)
 	} else {
+
+		var reqRange = r.Header.Get("Range")
+		// "safari or ios range 0-1 informal support, just wait transcode complete and return content length.
+		// In next request use seekable data. need enable TranscodingCacheSize."
+		if reqRange != "" && strings.HasPrefix(reqRange, "bytes=") {
+			startPosition := 0
+			endPosition := 0
+			reqBlockRange := strings.Split(strings.Split(reqRange, "=")[1], "-")
+			startPosition, _ = strconv.Atoi(reqBlockRange[0])
+			if len(reqBlockRange) > 1 && reqBlockRange[1] != "" {
+				tmp, _ := strconv.Atoi(reqBlockRange[1])
+				endPosition = tmp
+			}
+
+			if startPosition == 0 && endPosition == 1 {
+				data, _ := io.ReadAll(stream)
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", startPosition, endPosition, len(data)))
+				w.Header().Set("Accept-Ranges", "bytes")
+				// w.Header().Set("Transfer-Encoding", "chunked")
+				w.Header().Set("Content-Type", "audio/aac")
+				w.WriteHeader(206)
+				w.Header().Set("Status", "206")
+				one := make([]byte, 2)
+				// time.Sleep(10 * time.Second)
+				// io.ReadFull(stream, one)
+				w.Write(one)
+				return nil, nil
+			}
+		}
+
 		// If the stream doesn't provide a size (i.e. is not seekable), we can't support ranges/content-length
 		w.Header().Set("Accept-Ranges", "none")
 		w.Header().Set("Content-Type", stream.ContentType())
