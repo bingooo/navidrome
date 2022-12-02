@@ -159,7 +159,7 @@ func selectTranscodingOptions(ctx context.Context, ds model.DataStore, mf *model
 			bitRate = t.DefaultBitRate
 		}
 	}
-	if format == mf.Suffix && bitRate >= mf.BitRate {
+	if format == mf.Suffix && bitRate+10 >= mf.BitRate {
 		format = "raw"
 		bitRate = 0
 	}
