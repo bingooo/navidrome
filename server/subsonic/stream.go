@@ -53,32 +53,31 @@ func (api *Router) ServeStream(ctx context.Context, w http.ResponseWriter, r *ht
 						log.Trace(ctx, "Success sending range 0-1", "id", id, "size", c)
 					}
 				}
-				return nil, nil
 			}
-		}
-
-		// If the stream doesn't provide a size (i.e. is not seekable), we can't support ranges/content-length
-		w.Header().Set("Accept-Ranges", "none")
-		w.Header().Set("Content-Type", stream.ContentType())
-
-		estimateContentLength := utils.ParamBool(r, "estimateContentLength", false)
-
-		// if Client requests the estimated content-length, send it
-		if estimateContentLength {
-			length := strconv.Itoa(stream.EstimatedContentLength())
-			log.Trace(ctx, "Estimated content-length", "contentLength", length)
-			w.Header().Set("Content-Length", length)
-		}
-
-		if r.Method == "HEAD" {
-			go func() { _, _ = io.Copy(io.Discard, stream) }()
 		} else {
-			c, err := io.Copy(w, stream)
-			if log.CurrentLevel() >= log.LevelDebug {
-				if err != nil {
-					log.Error(ctx, "Error sending transcoded file", "id", id, err)
-				} else {
-					log.Trace(ctx, "Success sending transcode file", "id", id, "size", c)
+			// If the stream doesn't provide a size (i.e. is not seekable), we can't support ranges/content-length
+			w.Header().Set("Accept-Ranges", "none")
+			w.Header().Set("Content-Type", stream.ContentType())
+
+			estimateContentLength := utils.ParamBool(r, "estimateContentLength", false)
+
+			// if Client requests the estimated content-length, send it
+			if estimateContentLength {
+				length := strconv.Itoa(stream.EstimatedContentLength())
+				log.Trace(ctx, "Estimated content-length", "contentLength", length)
+				w.Header().Set("Content-Length", length)
+			}
+
+			if r.Method == "HEAD" {
+				go func() { _, _ = io.Copy(io.Discard, stream) }()
+			} else {
+				c, err := io.Copy(w, stream)
+				if log.CurrentLevel() >= log.LevelDebug {
+					if err != nil {
+						log.Error(ctx, "Error sending transcoded file", "id", id, err)
+					} else {
+						log.Trace(ctx, "Success sending transcode file", "id", id, "size", c)
+					}
 				}
 			}
 		}
