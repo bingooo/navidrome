@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core"
 	"github.com/navidrome/navidrome/log"
 	"github.com/navidrome/navidrome/model"
+	"github.com/navidrome/navidrome/server"
 	"github.com/navidrome/navidrome/server/subsonic/filter"
 	"github.com/navidrome/navidrome/server/subsonic/responses"
 	"github.com/navidrome/navidrome/utils"
@@ -95,7 +95,7 @@ func (api *Router) GetMusicDirectory(r *http.Request) (*responses.Subsonic, erro
 	id := utils.ParamString(r, "id")
 	ctx := r.Context()
 
-	entity, err := core.GetEntityByID(ctx, api.ds, id)
+	entity, err := model.GetEntityByID(ctx, api.ds, id)
 	if errors.Is(err, model.ErrNotFound) {
 		log.Error(r, "Requested ID not found ", "id", id)
 		return nil, newError(responses.ErrorDataNotFound, "Directory not found")
@@ -232,9 +232,9 @@ func (api *Router) GetArtistInfo(r *http.Request) (*responses.Subsonic, error) {
 	response := newResponse()
 	response.ArtistInfo = &responses.ArtistInfo{}
 	response.ArtistInfo.Biography = artist.Biography
-	response.ArtistInfo.SmallImageUrl = artist.SmallImageUrl
-	response.ArtistInfo.MediumImageUrl = artist.MediumImageUrl
-	response.ArtistInfo.LargeImageUrl = artist.LargeImageUrl
+	response.ArtistInfo.SmallImageUrl = server.AbsoluteURL(r, artist.SmallImageUrl)
+	response.ArtistInfo.MediumImageUrl = server.AbsoluteURL(r, artist.MediumImageUrl)
+	response.ArtistInfo.LargeImageUrl = server.AbsoluteURL(r, artist.LargeImageUrl)
 	response.ArtistInfo.LastFmUrl = artist.ExternalUrl
 	response.ArtistInfo.MusicBrainzID = artist.MbzArtistID
 	for _, s := range artist.SimilarArtists {
@@ -260,7 +260,7 @@ func (api *Router) GetArtistInfo2(r *http.Request) (*responses.Subsonic, error) 
 		similar.AlbumCount = s.AlbumCount
 		similar.Starred = s.Starred
 		similar.UserRating = s.UserRating
-		similar.ArtistImageUrl = s.ArtistImageUrl
+		similar.ArtistImageUrl = server.AbsoluteURL(r, s.ArtistImageUrl)
 		response.ArtistInfo2.SimilarArtist = append(response.ArtistInfo2.SimilarArtist, similar)
 	}
 	return response, nil
@@ -360,7 +360,7 @@ func (api *Router) buildAlbumDirectory(ctx context.Context, album *model.Album) 
 	}
 	dir.UserRating = album.Rating
 	dir.SongCount = album.SongCount
-	dir.CoverArt = album.CoverArtId
+	dir.CoverArt = album.CoverArtID().String()
 	if album.Starred {
 		dir.Starred = &album.StarredAt
 	}
@@ -380,7 +380,7 @@ func (api *Router) buildAlbum(ctx context.Context, album *model.Album, mfs model
 	dir.Name = album.Name
 	dir.Artist = album.AlbumArtist
 	dir.ArtistId = album.AlbumArtistID
-	dir.CoverArt = album.CoverArtId
+	dir.CoverArt = album.CoverArtID().String()
 	dir.SongCount = album.SongCount
 	dir.Duration = int(album.Duration)
 	dir.PlayCount = album.PlayCount
