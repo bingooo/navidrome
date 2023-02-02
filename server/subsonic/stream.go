@@ -61,23 +61,15 @@ func (api *Router) serveStream(ctx context.Context, w http.ResponseWriter, r *ht
 
 			estimateContentLength := utils.ParamBool(r, "estimateContentLength", false)
 
-			// if Client requests the estimated content-length, send it
-			if estimateContentLength {
-				length := strconv.Itoa(stream.EstimatedContentLength())
-				log.Trace(ctx, "Estimated content-length", "contentLength", length)
-				w.Header().Set("Content-Length", length)
-			}
-
-			if r.Method == "HEAD" {
-				go func() { _, _ = io.Copy(io.Discard, stream) }()
-			} else {
-				c, err := io.Copy(w, stream)
-				if log.CurrentLevel() >= log.LevelDebug {
-					if err != nil {
-						log.Error(ctx, "Error sending transcoded file", "id", id, err)
-					} else {
-						log.Trace(ctx, "Success sending transcode file", "id", id, "size", c)
-					}
+		if r.Method == http.MethodHead {
+			go func() { _, _ = io.Copy(io.Discard, stream) }()
+		} else {
+			c, err := io.Copy(w, stream)
+			if log.CurrentLevel() >= log.LevelDebug {
+				if err != nil {
+					log.Error(ctx, "Error sending transcoded file", "id", id, err)
+				} else {
+					log.Trace(ctx, "Success sending transcode file", "id", id, "size", c)
 				}
 			}
 		}
